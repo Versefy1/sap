@@ -24,77 +24,77 @@ local specialPoints = {
     Vector3.new(-185.072, 0.794, 1086.936),
 }
 
--- Find all matching mesh models
-local foundModels = {}
+-- Find all models where a child SpecialMesh with targetMeshId exists, store {Model, BasePart containing that mesh}
+local foundEntries = {}
 for _, pet in ipairs(standPetsFolder:GetChildren()) do
     local main = pet:FindFirstChild("Main")
     if main then
         local mesh = main:FindFirstChild("Mesh")
         if mesh and mesh:IsA("SpecialMesh") and mesh.MeshId == targetMeshId then
-            table.insert(foundModels, pet)
+            -- main is usually a BasePart holding the SpecialMesh; highlight that BasePart
+            if main:IsA("BasePart") then
+                table.insert(foundEntries, {Model = pet, HighlightPart = main})
+            end
         end
     end
 end
 
--- Notify player of results
-local count = #foundModels
+local count = #foundEntries
+
+-- Kick player if none found
 if count == 0 then
-    NotificationCmds.Message.Bottom({
-        Message = "No mesh was found",
-        Color = Color3.fromRGB(255, 50, 50)
-    })
+    player:Kick("Required pet mesh not found in the world. You have been kicked.")
     return
 end
 
+-- Notify player how many found
 NotificationCmds.Message.Bottom({
     Message = count .. "x mesh" .. (count > 1 and "es were" or " was") .. " found",
     Color = Color3.fromRGB(0, 255, 0)
 })
 
--- Find closest model to player
-local closestModel = nil
+-- Find closest to player
+local closestEntry = nil
 local closestDist = math.huge
 local rootPos = rootPart.Position
 
-for _, model in ipairs(foundModels) do
-    local primaryPart = model.PrimaryPart or model:FindFirstChild("HumanoidRootPart") or model:FindFirstChildWhichIsA("BasePart")
-    if primaryPart then
-        local dist = (primaryPart.Position - rootPos).Magnitude
+for _, entry in ipairs(foundEntries) do
+    local part = entry.HighlightPart
+    if part then
+        local dist = (part.Position - rootPos).Magnitude
         if dist < closestDist then
             closestDist = dist
-            closestModel = model
+            closestEntry = entry
         end
     end
 end
 
-if not closestModel then
-    warn("Closest model has no valid primary part")
+if not closestEntry then
+    warn("No valid BasePart to highlight found.")
     return
 end
 
--- Find closest special point to the closest model
+local closestPart = closestEntry.HighlightPart
+
+-- Find closest special point to the closest model part
 local closestSpecialPoint = nil
 local closestPointDist = math.huge
-local closestPrimaryPart = closestModel.PrimaryPart or closestModel:FindFirstChild("HumanoidRootPart") or closestModel:FindFirstChildWhichIsA("BasePart")
-local closestModelPos = closestPrimaryPart and closestPrimaryPart.Position or closestModel:GetModelCFrame().p
-
 for _, point in ipairs(specialPoints) do
-    local dist = (closestModelPos - point).Magnitude
+    local dist = (closestPart.Position - point).Magnitude
     if dist < closestPointDist then
         closestPointDist = dist
         closestSpecialPoint = point
     end
 end
 
-local destination = closestSpecialPoint or Vector3.new(4.608, 0.794, 1129.493) -- fallback
+local destination = closestSpecialPoint or Vector3.new(4.608, 0.794, 1129.493)
 
--- Pathfinding to destination
+-- Pathfinding
 local path = PathfindingService:CreatePath()
 path:ComputeAsync(rootPos, destination)
 
 if path.Status == Enum.PathStatus.Success then
-    local waypoints = path:GetWaypoints()
-    for _, waypoint in ipairs(waypoints) do
+    for _, waypoint in ipairs(path:GetWaypoints()) do
         humanoid:MoveTo(waypoint.Position)
         local reached = humanoid.MoveToFinished:Wait()
         if not reached then
@@ -105,31 +105,20 @@ else
     warn("Pathfinding failed: " .. tostring(path.Status))
 end
 
--- Add local-only Highlight to closest model
--- Add local-only Highlight to closest model
+-- Add local-only highlight to the base part holding the mesh
 do
-    local existingHighlight = nil
-    for _, child in ipairs(workspace:GetChildren()) do
-        if child:IsA("Highlight") and child.Adornee == closestModel then
-            existingHighlight = child
-            break
+    -- Remove any old highlight from this part
+    for _, h in ipairs(workspace:GetChildren()) do
+        if h:IsA("Highlight") and h.Adornee == closestPart then
+            h:Destroy()
         end
-    end
-    if existingHighlight then
-        existingHighlight:Destroy()
     end
 
     local highlight = Instance.new("Highlight")
-    -- Find a valid BasePart to adorn
-    local adornPart = closestModel.PrimaryPart or closestModel:FindFirstChildWhichIsA("BasePart")
-    if not adornPart then
-        warn("No valid BasePart found for Highlight adornee.")
-        return
-    end
-    highlight.Adornee = adornPart
+    highlight.Adornee = closestPart
     highlight.FillColor = Color3.fromRGB(0, 255, 0)
     highlight.OutlineColor = Color3.fromRGB(0, 150, 0)
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     highlight.Enabled = true
-    highlight.Parent = workspace -- local script: visible only to local player
+    highlight.Parent = workspace -- local script: only local player sees this highlight
 end
