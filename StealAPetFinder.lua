@@ -24,16 +24,26 @@ local specialPoints = {
     Vector3.new(-185.072, 0.794, 1086.936),
 }
 
--- Find all models where a child SpecialMesh with targetMeshId exists, store {Model, BasePart containing that mesh}
+-- Find all models where a child SpecialMesh with targetMeshId exists
 local foundEntries = {}
 for _, pet in ipairs(standPetsFolder:GetChildren()) do
     local main = pet:FindFirstChild("Main")
     if main then
         local mesh = main:FindFirstChild("Mesh")
         if mesh and mesh:IsA("SpecialMesh") and mesh.MeshId == targetMeshId then
-            -- main is usually a BasePart holding the SpecialMesh; highlight that BasePart
             if main:IsA("BasePart") then
                 table.insert(foundEntries, {Model = pet, HighlightPart = main})
+
+                -- Create bright local highlight for this part
+                local highlight = Instance.new("Highlight")
+                highlight.Adornee = main
+                highlight.FillColor = Color3.fromRGB(0, 255, 255)        -- Neon cyan
+                highlight.OutlineColor = Color3.fromRGB(255, 255, 0)     -- Bright yellow outline
+                highlight.FillTransparency = 0.15                        -- Slight glow
+                highlight.OutlineTransparency = 0                        -- Solid outline
+                highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                highlight.Enabled = true
+                highlight.Parent = workspace -- Local only highlight
             end
         end
     end
@@ -47,36 +57,34 @@ if count == 0 then
     return
 end
 
--- Notify player how many found
+-- Notify how many were found
 NotificationCmds.Message.Bottom({
-    Message = count .. "x mesh" .. (count > 1 and "es were" or " was") .. " found",
+    Message = count .. " mesh" .. (count > 1 and "es" or "") .. " found and highlighted.",
     Color = Color3.fromRGB(0, 255, 0)
 })
 
--- Find closest to player
+-- Find the closest highlight part
 local closestEntry = nil
 local closestDist = math.huge
 local rootPos = rootPart.Position
 
 for _, entry in ipairs(foundEntries) do
     local part = entry.HighlightPart
-    if part then
-        local dist = (part.Position - rootPos).Magnitude
-        if dist < closestDist then
-            closestDist = dist
-            closestEntry = entry
-        end
+    local dist = (part.Position - rootPos).Magnitude
+    if dist < closestDist then
+        closestDist = dist
+        closestEntry = entry
     end
 end
 
 if not closestEntry then
-    warn("No valid BasePart to highlight found.")
+    warn("No valid BasePart to walk to.")
     return
 end
 
 local closestPart = closestEntry.HighlightPart
 
--- Find closest special point to the closest model part
+-- Find closest special point to the mesh
 local closestSpecialPoint = nil
 local closestPointDist = math.huge
 for _, point in ipairs(specialPoints) do
@@ -89,7 +97,7 @@ end
 
 local destination = closestSpecialPoint or Vector3.new(4.608, 0.794, 1129.493)
 
--- Pathfinding
+-- Walk to it
 local path = PathfindingService:CreatePath()
 path:ComputeAsync(rootPos, destination)
 
@@ -104,22 +112,3 @@ if path.Status == Enum.PathStatus.Success then
 else
     warn("Pathfinding failed: " .. tostring(path.Status))
 end
-
--- Add local-only highlight to the base part holding the mesh
-do
-    -- Remove any old highlight from this part (optional if you want to avoid duplicates)
-    for _, h in ipairs(workspace:GetChildren()) do
-        if h:IsA("Highlight") and h.Adornee == closestPart then
-            h:Destroy()
-        end
-    end
-
-    local highlight = Instance.new("Highlight")
-    highlight.Adornee = closestPart
-    highlight.FillColor = Color3.fromRGB(0, 255, 50)
-    highlight.OutlineColor = Color3.fromRGB(0, 150, 20)
-    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    highlight.Enabled = true
-    highlight.Parent = workspace -- local script: only local player sees this highlight
-end
-
