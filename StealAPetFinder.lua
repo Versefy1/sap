@@ -115,11 +115,13 @@ do
         end
     end
 
-    local highlight = Instance.new("Highlight")
-    highlight.Adornee = closestPart
-    highlight.FillColor = Color3.fromRGB(0, 255, 0)
-    highlight.OutlineColor = Color3.fromRGB(0, 150, 0)
-    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    highlight.Enabled = true
-    highlight.Parent = workspace -- local script: only local player sees this highlight
+local highlight = Instance.new("Highlight")
+highlight.Adornee = closestPart
+highlight.FillColor = Color3.fromRGB(0, 255, 255)        -- Bright cyan fill
+highlight.OutlineColor = Color3.fromRGB(0, 170, 255)     -- Bright blue outline
+highlight.FillTransparency = 0.3                         -- Slightly transparent fill for glow effect
+highlight.OutlineTransparency = 0                         -- Fully visible outline
+highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+highlight.Enabled = true
+highlight.Parent = workspace
 end
