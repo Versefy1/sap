@@ -116,8 +116,8 @@ do
 
     local highlight = Instance.new("Highlight")
     highlight.Adornee = closestPart
-    highlight.FillColor = Color3.fromRGB(0, 255, 0)
-    highlight.OutlineColor = Color3.fromRGB(0, 150, 0)
+    highlight.FillColor = Color3.fromRGB(0, 255, 50)
+    highlight.OutlineColor = Color3.fromRGB(0, 150, 20)
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     highlight.Enabled = true
     highlight.Parent = workspace -- local script: only local player sees this highlight
