@@ -106,17 +106,30 @@ else
 end
 
 -- Add local-only Highlight to closest model
+-- Add local-only Highlight to closest model
 do
-    local existingHighlight = closestModel:FindFirstChildWhichIsA("Highlight")
+    local existingHighlight = nil
+    for _, child in ipairs(workspace:GetChildren()) do
+        if child:IsA("Highlight") and child.Adornee == closestModel then
+            existingHighlight = child
+            break
+        end
+    end
     if existingHighlight then
         existingHighlight:Destroy()
     end
 
     local highlight = Instance.new("Highlight")
-    highlight.Adornee = closestModel
+    -- Find a valid BasePart to adorn
+    local adornPart = closestModel.PrimaryPart or closestModel:FindFirstChildWhichIsA("BasePart")
+    if not adornPart then
+        warn("No valid BasePart found for Highlight adornee.")
+        return
+    end
+    highlight.Adornee = adornPart
     highlight.FillColor = Color3.fromRGB(0, 255, 0)
     highlight.OutlineColor = Color3.fromRGB(0, 150, 0)
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     highlight.Enabled = true
-    highlight.Parent = workspace -- local script: only local player sees this highlight
+    highlight.Parent = workspace -- local script: visible only to local player
 end
