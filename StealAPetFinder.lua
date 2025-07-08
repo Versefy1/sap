@@ -106,8 +106,9 @@ else
 end
 
 -- Add local-only highlight to the base part holding the mesh
+
 do
-    -- Remove any old highlight from this part
+    -- Remove any old highlight from this part (optional if you want to avoid duplicates)
     for _, h in ipairs(workspace:GetChildren()) do
         if h:IsA("Highlight") and h.Adornee == closestPart then
             h:Destroy()
